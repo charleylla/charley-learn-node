@@ -10,7 +10,7 @@ function syncMethod(){
 
 // syncMethod();//输出 README.md 文件的内容
 
-// 同步代码示例
+//一异步代码示例
 // readFile 是一个非阻塞函数
 function asyncMethod(){
     const fdata2 = fs.readFile("./README.md")

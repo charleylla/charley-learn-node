@@ -1,53 +1,36 @@
-# Koa 简介
-## 使用 Generator 提供中间件
-Koa 中的中间件均使用 Generator 函数，当需要跳转到下一个中间件时，使用 ```yield next``` 实现跳转。在执行 ```yield next``` 语句时，当前中间件会暂停执行，将控制权移交给下一个中间件。当中间件栈中没有 ```yield next``` 语句时，会逆序从这些中间件栈函数内部的 ```yield next``` 之后继续执行函数。
-## 响应
-使用 Koa 进行数据响应时，只需将所需要响应的数据挂载到 ```this.body``` 上，Koa 会自动进行内容协商（确定 Content-Type）返回数据，如：
+# Context（上下文）
+## this
+在使用 Express 时，```req``` 和 ```res``` 是作为回调函数的参数传入的，在 Koa 中，怎么获取 ```req``` 和 ```res``` 对象呢？
+
+它们都被绑定到当前函数的上下文（this）上了，因此我们可以通过 ```this.request``` 或 ```this.response``` 来访问这些对象。
 ```
-...
-this.body = "Hello World"
-...
-```
-同时，在使用 ```this.body``` 进行数据响应时，后面的响应会覆盖前面的响应，也就是只有一个响应能生效：
-```
-...
-// 这条响应不会生效
-this.body = "Hello World"
-// 这条响应会生效
-this.body = "End"
-...
-```
-这一点和 Express 是有区别的，使用 Express 时，我们需要调用诸如 ```res.send```、```res.json```、```res.end``` 等方法进行响应操作。
-## 多端口监听
-使用 Koa，我们可以为应用配置多个端口，只需要调用 ```app.listen``` 就好了：
-```
-// 监听 8080 端口
-app.listen(8080)
-// 监听 3000 端口
-app.listen(3000)
-```
-这样不论是访问 8080 还是访问 3000 端口都可以进入我们的应用了。这种特性对于我们构建集群应用很有帮助。
-## 设置 Cookie
-通过 ```app.cookies.set``` 方法可以进行 Cookie 设置：
-```
-this.cookies.set("test","koa")
-```
-## 设置 Cookie 签名
-在设置 Cookie 时，也可以设置 Cookie 签名，设置带签名的 Cookie 时，需要首先设置签名秘钥，否则不会生成签名 Cookie。
-设置签名秘钥时，将其挂载到 ```app.keys``` 上即可。
-```
-...
-app.keys = ["myKeys1","myKeys2"]
-...
-this.cookies.set("test2","Koa",{
-    secret:true
+app.use(function* (){
+    console.log(this.request)
+    console.log("=================")
+    console.log(this.response)
+    this.body = "Hello World"
+    console.log(this.response)
 })
-...
 ```
-## 错误处理机制
-当请求或相应的过程发生了错误时，Koa 会自动向客户端返回一个 500（Internal Server Error)，同时会执行错误事件的监听函数：
+注意，在进行响应前后，```response``` 对象中的内容是不一样的哦，可以运行实例查看。
+当前执行上下文上挂载的 ```request``` 和 ```response``` 对象都是经过 Koa 包装的对象，要想获取 Node 原生的 ```req``` 和 ```res``` 对象，可以直接使用 ```this.req``` 和 ```this.res``` 对象。
+## 不支持直接调用底层 res 进行响应处理
+Koa **不支持直接调用底层 ```res``` 进行响应处理**，因此请避免使用下面这些使用原生 ```res``` 处理的请求方式：
+ -res.statusCode
+- res.writeHead()
+- res.write()
+- res.end()
+
+## 抛出错误
+可以使用 ```this.throw``` 抛出错误，默认抛出 500 错误。支持以下集中处理方式：
 ```
-app.on("error",(err,ctx) => {
-    console.log(err)
-})
+// 自定义提示信息
+this.throw(404,"Not Found")
+this.throw("你猜？",404)
+
+// 使用规范的提示信息
+this.throw(403)
+
+// 默认会抛出 500 错误
+this.throw("你猜怎么得？你的服务 Down 掉了！")
 ```

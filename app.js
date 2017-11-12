@@ -1,37 +1,28 @@
-// 引入 koa
-const koa = require("koa");
-// 创建 app 实例
-const app = koa();
-// 监听端口
-app.listen(8080);
-// 多端口支持
-app.listen(3000);
-
-app.keys = ["myKeys1","myKeys2"]
+const koa = require("koa")
+const app = koa()
+app.listen(8080)
+// app.use(function* (){
+//     // 输出 request 对象
+//     // console.log(this.request)
+//     // console.log("=================")
+//     // 输出响应前的 response 对象
+//     // console.log(this.response)
+//     this.body = "Hello World"
+//     // 输出响应后的 response 对象
+//     // console.log(this.response)
+//     // 输出原生 req 对象 
+//     console.log(this.req)
+//     console.log("=================")
+//     // 输出原生的 res 对象
+//     console.log(this.res)
+// })
 
 app.use(function* (){
-    // 返回数据，直接将返回的数据挂载到 this.body 上
-    // this.body = "Hello World"
-    // 只有最后一条数据会生效
-    // this.body = "End"
-
-    // 设置 cookie
-    this.cookies.set("test","node")
-    // 设置带签名的 Cookie
-    this.cookies.set("test2","Koa",{
-        secret:true
-    })
-
-    // Koa 会自动进行内容协商，并设置相应的编码
-    this.body = {
-        name:"老王",
-        address:"隔壁"
-    }
-
-    这里搞点事情
-})
-
-// 错误处理
-app.on("error",(err,ctx) => {
-    console.log(err)
+    // 抛出错误，支持下列集中组合
+    // 自定义提示信息
+    // this.throw(404,"Not Found")
+    // this.throw("你猜？",404)
+    // 使用规范的提示信息
+    // this.throw(403)
+    this.throw("你猜怎么得？你的服务 Down 掉了！")
 })

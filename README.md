@@ -1,76 +1,104 @@
-# Express
-Express 是一个常用的 Node 服务端框架，可以用来快速构建 Node 应用功能程序。
-## 安装 Express
-这里直接安装使用的是 express@4.x 的版本：
-```
-yarn add express -S
-```
-## Express 常用的几个插件
-Express 下有如下几个常用的插件，我们可以根据自己的选择进行安装：
-- body-parser：用来处理 JSON、Raw、Text 和 URL 编码的数据
-- cookie-parser：用来解析 cookie，可以通过 req.cookie 来获取客户端传递的 cookie
-- multer：用来处理表单数据（enctype="multipart/form-data"）
+# 中间件
+## 中间件的基本概念
+中间件机制是对原始数据进行一系列的处理，并拿到最终结果的过程。就好比工厂的生产线，在拿到原材料后进行一系列的加工，并最终得到成品的过程，这些一系列的加工就是中间件（MiddleWares）。
 
-安装：
+再举个例子，比如一个人想要过河，可以踩着河面上的一些小石头，并最终依靠这些小石头达到对岸，从宏观上来看，这些小石头是必须的，因为没有这些小石头就过不了河，但是从微观上来讲，这些小石头又不全是必须的，因为完全可以在过河时跳过某几个小石头。
+
+Express 中的中间件也是如此，在数据处理的过程中，Express 提供了一系列的插件，用来对原始数据进行加工和处理，最终得到我们想要的数据。但这些中间件又不是绝对必须的，因为你可以自己对原始数据进行处理。但在绝大多数的情况下，这些中间件是必须的，因为这可以简化你的处理过程和业务逻辑。
+
+以上就是对 Express 中间件的一些理解过程。
+## Express 中间件的类型
+Express 有一下几种类型的中间件：
+- 应用级中间件
+- 路由级中间件
+- 错误处理中间件
+- 内置中间件
+- 第三方中间件
+
+## 应用级中间件
+应用级中间件直接挂载到 ```app``` 对象上，具体使用方式：```app.use()``` 或者 ```app.METHOD()``` 。
+### app.use 应用级中间件
+在使用 ```app.use``` 中间件时，如果不传入路径，那么在所有的请求都会执行这个中间件：
 ```
-yarn add body-parser cookie-parser multer -S
-```
-## 使用 supervisor 管理 Node 程序
-通常我们在修改 Node 程序代码后，需要手动重启服务，有了 supervisor 这个插件后，就可以在文件发生变化后自动重启了。
-```
-npm install supervisor -g
-```
-安装完成后，我们可以使用 ```supervisor``` 命令启动 Node 程序，如：
-```
-supervisor app.js
-```
-## req 和 res 对象
-Express 对 ```req``` 和 ```res``` 对象进行了一层包装，让我们更方便的获取请求相关的信息以及对响应操作提供了便利。
-## req.query 对象
-```req.query``` 对象对 URL 的 query string 进行了一层包装，使用此对象我们可以方便的获取 query string 查询的键值对。
-```
-const { username } = req.query
-```
-## req.params 对象
-```req.params``` 对象提供了对 URL 地址的参数的访问入口。
-```
-app.get("/testParams/:p1/:p2",(req,res) => {
-    const { p1,p2 } = req.params;
-    res.send(`参数一：${p1}<br>参数二：${p2}`)
+app.use((req,res,next) => {
+    console.log("I'm the first of the first!")
+    next()
 })
 ```
-注意，虽然 p2 参数在 p1 参数的后面，但对于 params 对象而言，它们是同级的。
-
-## res.download 方法 
-顾名思义，该方法为浏览器提供了下载操作，通过此方法可以让浏览器下载某一个文件。
+如果在使用 ```app.use``` 中间件时传入了路由，那么在所有处理该路由的请求都会执行这个中间件：
 ```
-...
-    res.download("./note.txt")
-```
-## res.json 方法
-顾名思义，```json``` 方法用来向客户端返回一个 JSON：
-```
-app.get("/testJSON",(req,res) => {
-    res.json({
-        name:"于谦",
-        major:"说相声",
-        hobby:["抽烟","喝酒","烫头"]
-    })
+app.use("/",(req,res,next) => {
+    console.log("俺是设置了路由的应用级中间件")
+    next()
 })
 ```
-## res.redirect 方法
-该方法用来进行重定向：
+### app.METHOD 级应用中间件
+这种中间件就是挂载到某个具体的请求处理下，其中 METHOD 是某个具体的请求方法，我们的第一个例子就是使用的此种中间件：
 ```
-app.get("/testRedirect",(req,res) => {
-    // res.redirect("/testJSON")
-    // 除了跳转到本站，还可以跳转到其他的站点
-    res.redirect("http://www.baidu.com")
-});
+app.get("/",[mid1,mid2])
+```
+## 路由级中间件
+路由级中间件和应用级中间件的用法基本一致，区别只在于二者绑定的对象不同。应用级中间件是绑定到应用对象（```app```）上的，而路由级中间件是绑定在路由对象上的（```router```）。相比于 ```app``` 对象，```router``` 对象更专注于对路由进行处理，没有 ```app``` 对象中那么多的 API，```router``` 对象能做到的 ```app``` 对象也能做到，所以 ```router``` 也被成为迷你 ```app```。
 
+一般而言，在进行路由处理时，最好使用 ```router``` 对象，因为它更加专注于路由处理。
+
+```router``` 对象上的中间件被叫做路由级中间件：
 ```
-## 静态文件服务
-Express 也可以很方便提供静态文件服务，这就需要使用到框架内置的 ```express.static``` 中间件：
+router.use((req,res,next) => {
+    console.log("我是第一个 router 级中间件")
+    next()
+})
+
+router.get("/hello",(req,res) => {
+    res.send("Hello Node")
+})
 ```
-// 将 public 目录作为静态资源目录
-app.use(express.static("public))
+需要注意的是，我们在配置了路由级中间件时并不会自动生效，还需要我们手动去挂载，将 ```router``` 挂载到 ```app``` 的中间件上。
+```
+// 如果不挂载是不会生效的
+app.use("/",router)
+```
+
+使用路由级中间件可以将我们的业务逻辑更加分开，对于不同的业务逻辑，只需在 ```router``` 中定义好后再挂载到 ```app``` 上即可，降低了系统的耦合度。
+## 错误处理中间件
+在应用开发时，不可避免的要用到错误处理，如何让错误发生时服务不挂掉，并且对客户端进行一些提示呢？这就需要使用到错误处理中间件。
+```
+router.use("/",(req,res) => {
+    这里故意出一点儿错误
+})
+
+// 使用错误处理中间件
+router.use((err,req,res,next) => {
+    console.log("错了一点错误")
+    res.send("你猜怎么的？我发生了一些错误")
+})
+
+app.use("/",router)
+```
+当然，我们也可以把错误处理中间件挂载到 ```app``` 上：
+```
+app.use((err,req,res,next) => {
+     console.log("错了一点错误")
+     res.send("你猜怎么的？我发生了一些错误")
+})
+```
+当我们把错误处理中间件挂载到 ```app``` 上时，这就是一个全局的错误处理中间件了，一般而言，我们最好将错误挂在到每个 ```router``` 上，以便于进行错误分级处理。
+### 错误处理中间件的两个注意点
+关于错误处理中间件有两个注意点：
+- 错误处理中间件必须放在所有的中间件末尾（如果你想处理他们中发生的错误的话）
+- 错误处理中间件的几个参数：```err```，```req```，```res```，```next``` 不能被省略，尽管你不一定会用到他们。
+
+## 内置中间件
+```express.static``` 是 Express 唯一内置的中间件，用来提供静态资源服务，其他的内置中间件，现已被抽离到单独的模块了。
+## 第三方中间件
+常用的如 body-parser，cookie-parser，multer 等，方便我们进行数据处理。
+```
+// 引入 cookieParser 对象
+const cookieParser = require("cookie-parser");
+// 使用 cookieParser 中间件
+app.use(cookieParser())
+app.get("/",(req,res) => {
+    console.log(req.cookies)
+    res.json(req.cookies)
+})
 ```

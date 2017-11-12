@@ -1,40 +1,37 @@
-const express = require("express")
-const app = express()
-const router = express.Router()
+// 引入 koa
+const koa = require("koa");
+// 创建 app 实例
+const app = koa();
+// 监听端口
+app.listen(8080);
+// 多端口支持
+app.listen(3000);
 
-app.listen(8080,() => {
-    console.log("服务已启动")
-})
+app.keys = ["myKeys1","myKeys2"]
 
-router.route("/")
-    .get((req,res) => {
-        这里故意搞点儿错误
+app.use(function* (){
+    // 返回数据，直接将返回的数据挂载到 this.body 上
+    // this.body = "Hello World"
+    // 只有最后一条数据会生效
+    // this.body = "End"
+
+    // 设置 cookie
+    this.cookies.set("test","node")
+    // 设置带签名的 Cookie
+    this.cookies.set("test2","Koa",{
+        secret:true
     })
 
-app.use("/",router);
-
-// 定义错误处理中间件
-// 日志处理
-app.use(logHandler)
-// 客户端处理
-app.use(clientHandler)
-// 捕获所有错误
-app.use(errorHandler)
-
-function logHandler(err,req,res,next){
-    console.log(err.stack);
-    // 将错误传递给下一个中间件
-    next(err);
-}
-
-function clientHandler(err,req,res,next){
-    // 针对 ajax 请求进行处理
-    if(req.xhr){
-        res.send("发生了一点错误！")
+    // Koa 会自动进行内容协商，并设置相应的编码
+    this.body = {
+        name:"老王",
+        address:"隔壁"
     }
-    next(err)
-}
 
-function errorHandler(err,req,res,next){
-    res.send("你的系统挂了！")
-}
+    这里搞点事情
+})
+
+// 错误处理
+app.on("error",(err,ctx) => {
+    console.log(err)
+})

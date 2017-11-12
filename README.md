@@ -1,104 +1,63 @@
-# 中间件
-## 中间件的基本概念
-中间件机制是对原始数据进行一系列的处理，并拿到最终结果的过程。就好比工厂的生产线，在拿到原材料后进行一系列的加工，并最终得到成品的过程，这些一系列的加工就是中间件（MiddleWares）。
-
-再举个例子，比如一个人想要过河，可以踩着河面上的一些小石头，并最终依靠这些小石头达到对岸，从宏观上来看，这些小石头是必须的，因为没有这些小石头就过不了河，但是从微观上来讲，这些小石头又不全是必须的，因为完全可以在过河时跳过某几个小石头。
-
-Express 中的中间件也是如此，在数据处理的过程中，Express 提供了一系列的插件，用来对原始数据进行加工和处理，最终得到我们想要的数据。但这些中间件又不是绝对必须的，因为你可以自己对原始数据进行处理。但在绝大多数的情况下，这些中间件是必须的，因为这可以简化你的处理过程和业务逻辑。
-
-以上就是对 Express 中间件的一些理解过程。
-## Express 中间件的类型
-Express 有一下几种类型的中间件：
-- 应用级中间件
-- 路由级中间件
-- 错误处理中间件
-- 内置中间件
-- 第三方中间件
-
-## 应用级中间件
-应用级中间件直接挂载到 ```app``` 对象上，具体使用方式：```app.use()``` 或者 ```app.METHOD()``` 。
-### app.use 应用级中间件
-在使用 ```app.use``` 中间件时，如果不传入路径，那么在所有的请求都会执行这个中间件：
+# 路由
+## controller / action
+标准的路由设定应该是由一个个的 controller 和 action 组成的，一个 controller 下可能会带有多个 action。
+如：home/index，home/about，home/join 等。
+## next 的执行时机
+在执行 ```send``` 或其他终结请求的方法后，还是可以执行 ```next``` 方法进行控制权移交。并不意味着 ```send``` 等方法是整个处理流程的终结，只是向浏览器响应的终结，在结束浏览器响应后，还是可以进行后续的处理，如收尾工作、日志打印等。
 ```
-app.use((req,res,next) => {
-    console.log("I'm the first of the first!")
-    next()
-})
-```
-如果在使用 ```app.use``` 中间件时传入了路由，那么在所有处理该路由的请求都会执行这个中间件：
-```
-app.use("/",(req,res,next) => {
-    console.log("俺是设置了路由的应用级中间件")
-    next()
-})
-```
-### app.METHOD 级应用中间件
-这种中间件就是挂载到某个具体的请求处理下，其中 METHOD 是某个具体的请求方法，我们的第一个例子就是使用的此种中间件：
-```
-app.get("/",[mid1,mid2])
-```
-## 路由级中间件
-路由级中间件和应用级中间件的用法基本一致，区别只在于二者绑定的对象不同。应用级中间件是绑定到应用对象（```app```）上的，而路由级中间件是绑定在路由对象上的（```router```）。相比于 ```app``` 对象，```router``` 对象更专注于对路由进行处理，没有 ```app``` 对象中那么多的 API，```router``` 对象能做到的 ```app``` 对象也能做到，所以 ```router``` 也被成为迷你 ```app```。
-
-一般而言，在进行路由处理时，最好使用 ```router``` 对象，因为它更加专注于路由处理。
-
-```router``` 对象上的中间件被叫做路由级中间件：
-```
-router.use((req,res,next) => {
-    console.log("我是第一个 router 级中间件")
-    next()
-})
-
-router.get("/hello",(req,res) => {
+router.get("/",(req,res,next) => {
     res.send("Hello Node")
-})
-```
-需要注意的是，我们在配置了路由级中间件时并不会自动生效，还需要我们手动去挂载，将 ```router``` 挂载到 ```app``` 的中间件上。
-```
-// 如果不挂载是不会生效的
-app.use("/",router)
-```
+    // 在向浏览器做出响应后仍然可以使用 next 方法
+    next()
+},(req,res) => {
+    console.log("do something else.")
+});
 
-使用路由级中间件可以将我们的业务逻辑更加分开，对于不同的业务逻辑，只需在 ```router``` 中定义好后再挂载到 ```app``` 上即可，降低了系统的耦合度。
-## 错误处理中间件
-在应用开发时，不可避免的要用到错误处理，如何让错误发生时服务不挂掉，并且对客户端进行一些提示呢？这就需要使用到错误处理中间件。
+app.use("/",router);
 ```
-router.use("/",(req,res) => {
-    这里故意出一点儿错误
-})
+## 中间件的组合
+在书写中间件时，我们可以将特定的功能块进行组合，就像这样：
+```
+...
+router.get("/home",[mid1,mid2],[mid3,mid4])
+...
+```
+本质上，进行组合与否并不会影响代码的底层执行，但是让我们的业务逻辑变得更清晰了。
+```
+router.get("/home",[homeMid1,homeMid2],homeMid3);
+function homeMid1(req,res,next){
+    console.log("homeMid1")
+    next()
+}
 
-// 使用错误处理中间件
-router.use((err,req,res,next) => {
-    console.log("错了一点错误")
-    res.send("你猜怎么的？我发生了一些错误")
-})
+function homeMid2(req,res,next){
+    console.log("homeMid2")
+    next()
+}
 
-app.use("/",router)
+function homeMid3(req,res){
+    console.log("homeMid3")
+    res.end("Done");
+}
 ```
-当然，我们也可以把错误处理中间件挂载到 ```app``` 上：
+## route 方法
+该方法可挂载到 ```app``` 对象或者 ```router``` 对象上，用来对某个路由请求进行响应。使用 ```route``` 方法可以很方便的让我们构建 RESTful API。
 ```
-app.use((err,req,res,next) => {
-     console.log("错了一点错误")
-     res.send("你猜怎么的？我发生了一些错误")
-})
+router.route("/user")
+    .get((req,res) => {
+        res.send("GET")
+    })
+    .post((req,res ) => {
+        res.send("POST")
+    })
+    .put((req,res) => {
+        res.send("PUT")
+    })
 ```
-当我们把错误处理中间件挂载到 ```app``` 上时，这就是一个全局的错误处理中间件了，一般而言，我们最好将错误挂在到每个 ```router``` 上，以便于进行错误分级处理。
-### 错误处理中间件的两个注意点
-关于错误处理中间件有两个注意点：
-- 错误处理中间件必须放在所有的中间件末尾（如果你想处理他们中发生的错误的话）
-- 错误处理中间件的几个参数：```err```，```req```，```res```，```next``` 不能被省略，尽管你不一定会用到他们。
-
-## 内置中间件
-```express.static``` 是 Express 唯一内置的中间件，用来提供静态资源服务，其他的内置中间件，现已被抽离到单独的模块了。
-## 第三方中间件
-常用的如 body-parser，cookie-parser，multer 等，方便我们进行数据处理。
+如果采用传统方式，我们会这样做：
 ```
-// 引入 cookieParser 对象
-const cookieParser = require("cookie-parser");
-// 使用 cookieParser 中间件
-app.use(cookieParser())
-app.get("/",(req,res) => {
-    console.log(req.cookies)
-    res.json(req.cookies)
-})
+router.get("/user",...)
+router.post("/user",...)
+router.put("/user",...)
 ```
+可见，使用 ```route``` 方法进行 RESTful 的处理更加直观方便。

@@ -24,5 +24,6 @@ app.use(function* (){
     // this.throw("你猜？",404)
     // 使用规范的提示信息
     // this.throw(403)
+    // 默认会抛出 500 错误
     this.throw("你猜怎么得？你的服务 Down 掉了！")
 })

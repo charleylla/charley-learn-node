@@ -1,36 +1,44 @@
-# Context（上下文）
-## this
-在使用 Express 时，```req``` 和 ```res``` 是作为回调函数的参数传入的，在 Koa 中，怎么获取 ```req``` 和 ```res``` 对象呢？
+# 使用 Express + Mysql 做的一个添加用户名的小 DEMO
+## 说明
+- 使用 swig 作为模板引擎
+- 使用 mysql 包连接数据库
+- 使用 jQuery 发送 AJAX 请求
+- 字段非空判断
 
-它们都被绑定到当前函数的上下文（this）上了，因此我们可以通过 ```this.request``` 或 ```this.response``` 来访问这些对象。
+## 表结构
 ```
-app.use(function* (){
-    console.log(this.request)
-    console.log("=================")
-    console.log(this.response)
-    this.body = "Hello World"
-    console.log(this.response)
-})
-```
-注意，在进行响应前后，```response``` 对象中的内容是不一样的哦，可以运行实例查看。
-当前执行上下文上挂载的 ```request``` 和 ```response``` 对象都是经过 Koa 包装的对象，要想获取 Node 原生的 ```req``` 和 ```res``` 对象，可以直接使用 ```this.req``` 和 ```this.res``` 对象。
-## 不支持直接调用底层 res 进行响应处理
-Koa **不支持直接调用底层 ```res``` 进行响应处理**，因此请避免使用下面这些使用原生 ```res``` 处理的请求方式：
- -res.statusCode
-- res.writeHead()
-- res.write()
-- res.end()
+/*
+Navicat MySQL Data Transfer
 
-## 抛出错误
-可以使用 ```this.throw``` 抛出错误，默认抛出 500 错误。支持以下集中处理方式：
-```
-// 自定义提示信息
-this.throw(404,"Not Found")
-this.throw("你猜？",404)
+Source Server         : 本地
+Source Server Version : 50717
+Source Host           : localhost:3306
+Source Database       : db_node_express
 
-// 使用规范的提示信息
-this.throw(403)
+Target Server Type    : MYSQL
+Target Server Version : 50717
+File Encoding         : 65001
 
-// 默认会抛出 500 错误
-this.throw("你猜怎么得？你的服务 Down 掉了！")
+Date: 2017-11-13 16:45:55
+*/
+
+SET FOREIGN_KEY_CHECKS=0;
+
+-- ----------------------------
+-- Table structure for `tb_user`
+-- ----------------------------
+DROP TABLE IF EXISTS `tb_user`;
+CREATE TABLE `tb_user` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(20) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8;
+
+-- ----------------------------
+-- Records of tb_user
+-- ----------------------------
+INSERT INTO `tb_user` VALUES ('9', '张三');
+INSERT INTO `tb_user` VALUES ('10', '张三');
+INSERT INTO `tb_user` VALUES ('13', '王麻子');
+
 ```

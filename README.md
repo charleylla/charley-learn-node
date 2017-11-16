@@ -1,6 +1,6 @@
 # Nginx 的反向代理和负载均衡
 ## 正向代理和反向代理
-我们经常正向代理和反向代理这两个名词，那么什么是正向代理，什么是反向代理呢？这里我举两个通俗的例子帮助我们理解这两个概念：
+我们经常看到正向代理和反向代理这两个名词，那么什么是正向代理，什么是反向代理呢？这里我举两个通俗的例子帮助理解这两个概念：
 ### 正向代理
 假如我们要访问一个网站A，但是由于各种原因无法直接访问到，我们可以借助一个可以访问到网站A的第三方的服务器B，
 通过服务器B访问网站A，我们通过服务器B访问网站A的这个过程就是正向代理。
@@ -29,38 +29,80 @@ sudo nginx
 // 停止 Nginx
 sudo nginx -s stop
 
-// 重载 Nginx 配置文件
+// 重载 Nginx 配置文件（平滑重启）
 sudo nginx -s reload
-
-// 重启 Nginx
-sudo nginx -s restart
 
 // 自定义 Nginx 配置文件
 nginx -c xxx.conf
 ```
+
+## 准备两台服务器
+要配置反向代理和负载均衡，至少需要三台服务器：一台服务器用来做反向代理，另外两台服务器用来让用户访问。由于我是在本地进行的开发，手头上没有服务器和虚拟机，就在本地使用不同的端口来表示不同的服务器了。
+
+使用 Koa2 创建一个简单的服务器，代码如下：
+```
+const Koa = require("koa")
+const app = new Koa();
+const Router = require("koa-router");
+const router = new Router();
+// 获取命令行参数
+const PORT = process.argv.splice(2)[0];
+// 监听端口
+app.listen(PORT);
+
+router.get("/",async (ctx,next) => {
+    ctx.body = `<h1>Server at ${PORT}</h1>`
+});
+
+app.use(router.routes());
+```
+这里的端口是从命令行参数获取的（您也可以使用在代码中监听随机端口，但这样就不好在 Nginx 负载均衡中指定服务器的地址了），我们可以用起来指定多个服务器。
+
 ## 配置 Nginx 负载均衡
+对 Nginx 配置负载均衡比较简单，需要对 ```http``` 配置项下的 ```upstream``` 和 ```server``` 进行配置：
+```
+http {
+    ...
+    upstream mynodeapp {
+        server 127.0.0.1:8081;
+        server 127.0.0.1:8082;
+    }
+    ...
+    server {
+        listen       80;
+        server_name  localhost;
+        location / {
+            proxy_pass  http://mynodeapp;
+        }
+        ...
+    }
+    ...
+}
+```
+这样，我们就配置了一个简单的负载均衡服务器。
 
-
-
-## Nginx
-## HTTP Upstream 模块
-
- sudo apt-get install nginx
- sudo nginx
- sudo nginx -s stop
- sudo nginx -s reload
- sudo nginx -s start
-
- nginx -t：测试配置文件是否OK
- nginx -c xxx.conf：自行指定配置文件
- 一般我们在指定配置文件前，需要进行备份
- cp nginx.conf nginx.conf.bak
- 怎么找到 nginx 所指向的根目录
-
- 设置 ip_hash，保证每次刷新都落到同一台服务
- 权重：根据权重选择落在哪一台服务器
-
- 1.用户（谁能使用）
- 2.工作线程数目（auto），一般不超过 CPU 核心的两倍
-
-## Node 上线部署
+## ip_hash
+如果对于没有用户验证或者其他验证需求的站点，上面的配置已经足够了。但对于有用户验证之类需求的站点而言，上面的配置是有问题的。因为用户每次刷新页面后不保证能够降落到同一台服务器上，如果需要进行验证操作，当认证成功的用户降落到另一台服务器上时，认证就可能失败。
+解决方法也很简单：在 ```upstream``` 模块下添加 ```ip_hash``` 配置即可，这样会保证用户每次刷新都降落在同一台服务器上：
+```
+...
+# 配置负载均衡
+upstream mynodeapp {
+    ip_hash;
+    server 127.0.0.1:8081;
+    server 127.0.0.1:8082;
+}
+...
+```
+## url_hash
+```ip_hash``` 是通过用户的 IP 地址来判断落点，对于固定的 IP 地址较好用，但有时候用户使用的是动态 IP，IP 地址可能是在不断变化的，这时候如果再根据 IP 地址来判断落点就不准确了。我们可以使用 ```url_hash``` 来处理这种情况，```url_hash``` 的具体配置和 ```ip_hash``` 一致，这里不再赘述了。
+## 访问权重配置
+我们还可以对服务器进行访问权重的配置，如果我们事先知道哪一台服务器性能较好，我们可以将它的权重设置的大一点。但一般而言，使用默认的配置就好了，具体着陆到哪一台服务器，由 Nginx 去判断。
+```
+# 配置负载均衡
+upstream mynodeapp {
+    server 127.0.0.1:8081 weight=5;
+    server 127.0.0.1:8082;
+}
+```
+我们将端口为 ```8081``` 的服务器的权重配置的稍大些，在负载均衡时，着陆到该服务器的几率也更大了。
